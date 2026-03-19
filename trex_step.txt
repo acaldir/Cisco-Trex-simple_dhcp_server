@@ -1,0 +1,364 @@
+root@muji:/v3.08/emu# tree 
+.
+|-- simple_icmp.py
+|-- simple_ipv4.py
+|-- simple_icmp1.py
+|-- simple_icmp_local.py
+|-- simple_igmp.py
+|-- dhcpsrv_relay.py
+
+
+import re
+
+def get_ip(prompt):
+    while True:
+        ip = input(prompt).strip()
+        parts = ip.split('.')
+        if len(parts) == 4 and all(p.isdigit() and 0 <= int(p) <= 255 for p in parts):
+            return ip
+        print("  Geçersiz IP adresi, tekrar deneyin.")
+
+
+def get_mac(prompt):
+    while True:
+        mac = input(prompt).strip()
+        if mac == "":
+            return None
+        parts = mac.split(':')
+        if len(parts) == 6 and all(len(p) == 2 and all(c in '0123456789abcdefABCDEF' for c in p) for p in parts):
+            return mac.lower()
+        print("  Geçersiz MAC adresi (örnek: 0c:aa:d4:60:00:01), tekrar deneyin.")
+
+
+def ip_arti_bir(ip):
+    parts = ip.split('.')
+    parts[-1] = str(int(parts[-1]) + 1)
+    return '.'.join(parts)
+
+
+def guncelle_simple_ipv4(ip, gw, path="/v3.08/emu/simple_ipv4.py"):
+    with open(path, "r") as f:
+        content = f.read()
+
+    content = re.sub(
+        r"ipv4\s*=\s*Ipv4\('[^']*'\)",
+        f"ipv4 = Ipv4('{ip}')",
+        content
+    )
+    content = re.sub(
+        r"dg\s*=\s*Ipv4\('[^']*'\)",
+        f"dg = Ipv4('{gw}')",
+        content
+    )
+
+    with open(path, "w") as f:
+        f.write(content)
+    print(f"simple_ipv4.py guncellendi ipv4='{ip}', dg='{gw}'")
+
+
+def guncelle_simple_icmp(ip, gw, path="/v3.08/emu/simple_icmp.py"):
+    with open(path, "r") as f:
+        content = f.read()
+
+    content = re.sub(
+        r"ipv4\s*=\s*Ipv4\('[^']*'\)",
+        f"ipv4 = Ipv4('{ip}')",
+        content
+    )
+    content = re.sub(
+        r"dg\s*=\s*Ipv4\('[^']*'\)",
+        f"dg = Ipv4('{gw}')",
+        content
+    )
+
+    with open(path, "w") as f:
+        f.write(content)
+    print(f"simple_icmp.py guncellendi ipv4='{ip}', dg='{gw}'")
+
+
+def guncelle_simple_icmp1(eth0_ip, eth0_gw, eth1_ip, eth1_gw, path="/v3.08/emu/simple_icmp1.py"):
+    with open(path, "r") as f:
+        content = f.read()
+
+    # if i==0 blogu → eth0
+    content = re.sub(
+        r"(if i==0:.*?ipv4\s*=\s*Ipv4\(')([^']*)('\))",
+        rf"\g<1>{eth0_ip}\g<3>",
+        content,
+        flags=re.DOTALL
+    )
+    content = re.sub(
+        r"(if i==0:.*?dg\s*=\s*Ipv4\(')([^']*)('\))",
+        rf"\g<1>{eth0_gw}\g<3>",
+        content,
+        flags=re.DOTALL
+    )
+
+    # else blogu → eth1
+    content = re.sub(
+        r"(else:.*?ipv4\s*=\s*Ipv4\(')([^']*)('\))",
+        rf"\g<1>{eth1_ip}\g<3>",
+        content,
+        flags=re.DOTALL
+    )
+    content = re.sub(
+        r"(else:.*?dg\s*=\s*Ipv4\(')([^']*)('\))",
+        rf"\g<1>{eth1_gw}\g<3>",
+        content,
+        flags=re.DOTALL
+    )
+
+    # transe addr → eth0_gw:9001
+    content = re.sub(
+        r"('transe'\s*:\s*\{'addr'\s*:\s*')[^']*(')",
+        rf"\g<1>{eth0_gw}:9001\g<2>",
+        content
+    )
+
+    with open(path, "w") as f:
+        f.write(content)
+    print(f"simple_icmp1.py guncellendi eth0: ipv4='{eth0_ip}', dg='{eth0_gw}' | eth1: ipv4='{eth1_ip}', dg='{eth1_gw}' | transe addr='{eth0_gw}:9001'")
+
+
+def guncelle_simple_icmp_local(ip, gw, path="/v3.08/emu/simple_icmp_local.py"):
+    with open(path, "r") as f:
+        content = f.read()
+
+    content = re.sub(
+        r"ipv4\s*=\s*Ipv4\('[^']*'\)",
+        f"ipv4 = Ipv4('{ip}')",
+        content
+    )
+    content = re.sub(
+        r"dg\s*=\s*Ipv4\('[^']*'\)",
+        f"dg = Ipv4('{gw}')",
+        content
+    )
+
+    # transe addr → eth0_gw:9001
+    content = re.sub(
+        r"('transe'\s*:\s*\{'addr'\s*:\s*')[^']*(')",
+        rf"\g<1>{gw}:9001\g<2>",
+        content
+    )
+
+    with open(path, "w") as f:
+        f.write(content)
+    print(f"simple_icmp_local.py guncellendi ipv4='{ip}', dg='{gw}', transe addr='{gw}:9001'")
+
+
+def guncelle_simple_igmp(ip, gw, path="/v3.08/emu/simple_igmp.py"):
+    with open(path, "r") as f:
+        content = f.read()
+
+    content = re.sub(
+        r"ipv4\s*=\s*Ipv4\('[^']*'\)",
+        f"ipv4 = Ipv4('{ip}')",
+        content
+    )
+    content = re.sub(
+        r"dg\s*=\s*Ipv4\('[^']*'\)",
+        f"dg = Ipv4('{gw}')",
+        content
+    )
+
+    with open(path, "w") as f:
+        f.write(content)
+    print(f"simple_igmp.py guncellendi ipv4='{ip}', dg='{gw}'")
+
+
+print("=== TRex Konfigürasyon Olusturucu ===\n")
+
+print("--- eth0 Ayarlari ---")
+eth0_ip  = get_ip("eth0 IP adresi         : ")
+eth0_gw  = get_ip("eth0 Default Gateway   : ")
+eth0_mac = get_mac("eth0 Dest MAC adresi (bos gecmek icin Enter): ")
+
+print("\n--- eth1 Ayarlari ---")
+eth1_ip  = get_ip("eth1 IP adresi         : ")
+eth1_gw  = get_ip("eth1 Default Gateway   : ")
+eth1_mac = get_mac("eth1 Dest MAC adresi (bos gecmek icin Enter): ")
+
+# eth0_ip + 1  →  py dosyalari icin
+eth0_ip_py = ip_arti_bir(eth0_ip)
+
+
+def port_entry(ip, gw, mac):
+    lines = []
+    lines.append(f"                 - ip         : {ip}")
+    lines.append(f"                   default_gw : {gw}")
+    if mac:
+        lines.append(f"                   dest_mac   : \"{mac}\"")
+    return "\n".join(lines)
+
+
+yaml_content = f"""- port_limit    : 2
+  version       : 2
+  low_end       : true
+  interfaces    : ["eth0", "eth1"]
+  port_info     :  # set eh mac addr
+{port_entry(eth0_ip, eth0_gw, eth0_mac)}
+{port_entry(eth1_ip, eth1_gw, eth1_mac)}
+"""
+
+# /etc/trex_cfg.yaml → gercek eth0_ip
+output_path = "/etc/trex_cfg.yaml"
+with open(output_path, "w") as f:
+    f.write(yaml_content)
+print(f"\nKonfigurasyon '{output_path}' dosyasina kaydedildi.")
+
+# py dosyalari → eth0_ip + 1
+guncelle_simple_ipv4(eth0_ip_py, eth0_gw)
+guncelle_simple_icmp(eth0_ip_py, eth0_gw)
+guncelle_simple_icmp1(eth0_ip_py, eth0_gw, eth1_ip, eth1_gw)
+guncelle_simple_icmp_local(eth0_ip_py, eth0_gw)
+guncelle_simple_igmp(eth0_ip_py, eth0_gw)
+
+print("\n--- Olusturulan YAML ---")
+print(yaml_content)
+
+1 - /etc/trex_cfg.yaml calisiyor harika 
+2 - guncelle_simple_ipv4(ip, gw, path="/v3.08/emu/simple_ipv4.py"): icindeki ipv4 = Ipv4 ve  dg = Ipv4 degistirildi cok guzel calisiyor harika
+3 - guncelle_simple_icmp(ip, gw, path="/v3.08/emu/simple_icmp.py"): icindeki ipv4 = Ipv4 ve  dg = Ipv4 degistirildi cok guzel calisiyor harika
+4 - guncelle_simple_icmp1(ip, gw, path="/v3.08/emu/simple_icmp1.py"): icindeki 
+
+            if i==0:
+                mac = Mac('00:00:00:70:00:03')
+                ipv4 = Ipv4('eth0_ip olacak')
+                dg = Ipv4('eth0_gw olacak')
+            else:
+                mac = Mac('10:00:00:70:00:03')
+                ipv4 = Ipv4('eth1_ip olacak')
+                dg = Ipv4('eth1_gw olacak')   harika bu da calisiyor.
+
+5 - guncelle_simple_icmp_local(ip, gw, path="/v3.08/emu/simple_icmp1.py"): icindeki ipv4 = Ipv4 ve  dg = Ipv4 olacak sekilde 
+        self.def_c_plugs  = {
+                            'arp': {},
+                            'icmp': {},
+                            'ipv6': {},
+                            'transport': {},
+                            'transe': {'addr':'eth0_gw olacak:9001', 'size':100000, 'loops':100} guncelle 
+                             }
+
+6 -  guncelle_simple_igmp(ip, gw, path="/v3.08/emu/simple_igmp.py"):icindeki ipv4 = Ipv4 ve  dg = Ipv4 degistirilecek
+
+7 - eth0 ip icin girdigim bilgiler sadece /etc/trex_cfg.yaml icine isleyecek  fakat 
+
+|-- simple_icmp.py
+|-- simple_ipv4.py
+|-- simple_icmp1.py
+|-- simple_icmp_local.py 
+
+bunlarin icindeki olan eth0 ip si ni +1 olarak yazmak lazim  ornek olarak eth0 = 10.1.2.10 ise  
+
+ipv4 = Ipv4  =  10.1.2.11 olmali  
+ipv4 = Ipv4('eth1_ip olacak') + 1 olmali 
+
+8 - guncelle_dhcpsrv_relay(ip, gw, path="/v3.08/emu/dhcpsrv_relay.py"):icindeki 
+
+parser.add_argument('--srv_ip', type = str, default = "eth0_ip + 1 olacak",  
+                    help='Server IPv4')
+parser.add_argument('--srv_dg_ip', type = str, default = "eth0_gw olacak",
+                    help='Server Default Gateway')
+
+ "exclude": ["1.1.2.1","1.1.2.255"] bunu ekleyeceksin 
+
+root@trex-yeni-1:/v3.08/emu# cat dhcpsrv_relay.py 
+from trex.emu.api import *
+import argparse
+
+
+class Prof1():
+    def __init__(self):
+        self.def_ns_plugs  = None
+        self.def_c_plugs  = None
+
+    def get_dhcpsrv_config(self):
+        """Get DHCP Server configuration.
+
+        Returns:
+            dict: Dictionary that represents the Init Json.
+        """
+        return {
+            "default_lease": 120,
+            "pools": [
+                {
+                    "min": "1.1.2.3",
+                    "max": "1.1.2.255",
+                    "prefix": 24,
+                    "exclude": ["1.1.2.1","1.1.2.255"]
+                },
+            ],
+            "options": {
+                "offer": [
+                    {
+                        "type": 6,                                                  # DNS Server
+                        "data": [8, 8, 8, 8]                                        # 8.8.8.8
+                    },
+                    {
+                        "type": 15,                                                 # Domain Name
+                        "data": [99, 105, 115, 99, 111, 46, 99, 111, 109]           # Cisco.com
+                    }
+                ],
+                "ack": [
+                    {
+                        "type": 6,
+                        "data": [8, 8, 8, 8]
+                    },
+                    {
+                        "type": 15,
+                        "data": [99, 105, 115, 99, 111, 46, 99, 111, 109]
+                    }
+                ]
+            }
+        }
+
+    def create_profile(self, clients_size, clientMac, serverIp, serverDgIp):
+
+        mac = Mac(clientMac)
+        srv_ns = EMUNamespaceObj(ns_key = EMUNamespaceKey(vport=0), def_c_plugs = self.def_c_plugs)
+        srv = EMUClientObj(mac     = mac[0].V(),
+                           ipv4    = Ipv4(serverIp).V(),
+                           ipv4_dg = Ipv4(serverDgIp).V(),
+                           plugs   = {'arp': {},
+                                      'icmp': {},
+                                      'dhcpsrv': self.get_dhcpsrv_config()}
+                                      )
+        srv_ns.add_clients(srv)
+
+        c_ns = EMUNamespaceObj(ns_key = EMUNamespaceKey(vport=1), def_c_plugs = self.def_c_plugs)
+        for i in range(clients_size):
+            client = EMUClientObj(mac     = mac[i+1].V(),       # The first MAC is given to the server.
+                                  ipv4    = Ipv4('0.0.0.0').V(),
+                                  ipv4_dg = Ipv4('0.0.0.0').V(),
+                                  plugs   = {'arp': {},
+                                             'icmp': {},
+                                             'dhcp': {},
+                                          },
+                                  )
+            c_ns.add_clients(client)
+
+        return EMUProfile(ns = [srv_ns, c_ns], def_ns_plugs = self.def_ns_plugs)
+
+    def get_profile(self, tuneables):
+        # Argparse for tunables
+        parser = argparse.ArgumentParser(description='Argparser for DHCPv4 Relay Server. \n Port 0 - Server. Port 1 - Clients', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser.add_argument('--clients', type = int, default = 3,
+                    help='Number of clients to create.')
+        parser.add_argument('--mac', type = str, default = '00:00:00:70:00:01',
+                    help='Starting MAC address')
+        parser.add_argument('--srv_ip', type = str, default = "99.1.1.100",  
+                    help='Server IPv4')
+        parser.add_argument('--srv_dg_ip', type = str, default = "99.1.1.1",
+                    help='Server Default Gateway')
+
+        args = parser.parse_args(tuneables)
+        return self.create_profile(args.clients, args.mac, args.srv_ip, args.srv_dg_ip)
+
+
+def register():
+    return Prof1()
+
+
+
+
